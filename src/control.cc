@@ -38,6 +38,14 @@ enum {
 
 
 //
+// -- These are the instructions which will be encoded
+//    ------------------------------------------------
+enum {
+    NOP                     = 0x00,
+};
+
+
+//
 // -- the size of the eeprom
 //    ----------------------
 const int PROM_SIZE = 1024 * 32;         // we are using 32KB EEPROM
@@ -55,12 +63,19 @@ uint8_t promBuffer [PROM_SIZE];
 //    ------------------------------------------------------------------
 uint64_t GenerateControlSignals(int loc)
 {
-    int flags = (loc >> 8) & 0x7f;
-    int instr = loc & 0xff;
+    int flags = (loc >> 24) & 0x0f;         // top 4 bits
+    int instr = loc & 0xff;                 // middle 8 bits
+    // -- bottom 4 bits are inconsequential here
 
     const uint64_t nop = ADDR_BUS_1_ASSERT_PC | AND_LATCH_PC | PC_INC;
 
-    return nop;
+    switch (instr) {
+    case NOP:
+        return nop;
+
+    default:
+        return nop;
+    }
 }
 
 

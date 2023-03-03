@@ -20,6 +20,10 @@
 
 
 .phony: all
-all:
+all: build
+	./eeprom
+
+.phony: build
+build:
 	tup
 
