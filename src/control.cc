@@ -36,9 +36,13 @@ enum {
 
     // bit 5 -- group assert to Main Bus
     MAIN_BUS_GROUP_0        = (0b0      << 5) << 0,
-    MAIN_BUS_GROUP_1        = (0b0      << 5) << 0,
+    MAIN_BUS_GROUP_1        = (0b1      << 5) << 0,
 
-    // bits 4:0 -- unused so far
+    // bit 4 -- Fetch Assert to Instruction
+    INSTRUCTION_ASSERT      = (0b0      << 4) << 0,
+    INSTRUCTION_SUPPRESS    = (0b1      << 4) << 0,
+
+    // bits 3:0 -- unused so far
 
 
     //---------------------------------------------------
@@ -69,20 +73,39 @@ enum {
     //    =====
 
     // bit 7 -- R1 & Latch signal
-    R1_AND_LATCH            = (0b0      << 7) << 16,
+    R1_AND_LATCH            = (0b1      << 7) << 16,
 
     // bit 6 -- PC & Latch signal
-    PC_AND_LATCH            = (0b0      << 6) << 16,
+    PC_AND_LATCH            = (0b1      << 6) << 16,
 
     // bits 5:0 -- unused so far
+
+
+    //---------------------------------------------------
+
+    //
+    // == Improve code readability
+    //    ========================
+    FETCH_ASSERT_MAIN       = MAIN_BUS_GROUP_1 | INSTRUCTION_SUPPRESS,
+    R1_LOAD_AND_LATCH       = R1_LOAD | R1_AND_LATCH,
 };
 
 
 //
 // -- These are the instructions which will be encoded
-//    ------------------------------------------------
+//
+//    Recall that the instruction word has the following format:
+// 
+//              CCCC IIII IIII MMMM
+//
+//    Where:
+//    - CCCC are control flags, used to condition the instruction
+//    - IIII IIII is the instruction, encoded in the enum below
+//    - MMMM is the main bus assert, hard-wired into the control module
+//    -----------------------------------------------------------------
 enum {
     NOP                     = 0x00,
+    MOV_R1_IMMED            = 0x01,
 };
 
 
@@ -108,11 +131,15 @@ uint64_t GenerateControlSignals(int loc)
     int instr = (loc >> 4) & 0xff;          // middle 8 bits
     // -- bottom 4 bits are inconsequential here
 
-    const uint64_t nop = ADDR_BUS_1_ASSERT_PC | PC_AND_LATCH | PC_INC;
+    const uint64_t nop = ADDR_BUS_1_ASSERT_PC | PC_AND_LATCH | PC_INC | INSTRUCTION_ASSERT;
+    uint64_t out = ADDR_BUS_1_ASSERT_PC | PC_AND_LATCH | PC_INC;
 
     switch (instr) {
     case NOP:
         return nop;
+
+    case MOV_R1_IMMED:
+        return out | FETCH_ASSERT_MAIN | R1_LOAD_AND_LATCH;
 
     default:
         return nop;
