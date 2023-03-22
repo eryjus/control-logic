@@ -127,8 +127,8 @@ uint64_t promBuffer [PROM_SIZE];
 //    ------------------------------------------------------------------
 uint64_t GenerateControlSignals(int loc)
 {
-    int flags = (loc >> 24) & 0x0f;         // top 4 bits
-    int instr = (loc >> 4) & 0xff;          // middle 8 bits
+    int flags = (loc >> 16) & 0x7f;         // top 7 bits of the memory address; flags for augmenting the control signals
+    int instr = (loc >> 0) & 0xff;          // bottom 8 bits for the memory address
     // -- bottom 4 bits are inconsequential here
 
     const uint64_t nop = ADDR_BUS_1_ASSERT_PC | PC_AND_LATCH | PC_INC | INSTRUCTION_ASSERT;
