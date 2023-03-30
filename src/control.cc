@@ -106,6 +106,8 @@ enum {
 enum {
     NOP                     = 0x00,
     MOV_R1_IMMED            = 0x01,
+
+    JMP_IMMED               = 0xff,
 };
 
 
@@ -140,6 +142,9 @@ uint64_t GenerateControlSignals(int loc)
 
     case MOV_R1_IMMED:
         return out | FETCH_ASSERT_MAIN | R1_LOAD_AND_LATCH;
+
+    case JMP_IMMED:
+        return FETCH_ASSERT_MAIN | PC_LOAD | PC_AND_LATCH | INSTRUCTION_SUPPRESS | ADDR_BUS_1_ASSERT_PC;      
 
     default:
         return nop;
