@@ -42,7 +42,13 @@ enum {
     INSTRUCTION_ASSERT      = (0b0      << 4) << 0,
     INSTRUCTION_SUPPRESS    = (0b1      << 4) << 0,
 
-    // bits 3:0 -- unused so far
+    // bit 3 -- Clear the Program Carry
+    PGM_CLC                 = (0b1      << 3) << 0,
+
+    // bit 2 -- Set the Program Carry
+    PGM_STC                 = (0b1      << 2) << 0,
+
+    // bits 1:0 -- unused so far
 
 
     //---------------------------------------------------
@@ -87,6 +93,7 @@ enum {
     // == Improve code readability
     //    ========================
     FETCH_ASSERT_MAIN       = MAIN_BUS_GROUP_1 | INSTRUCTION_SUPPRESS,
+    PC_ASSERT_MAIN          = MAIN_BUS_GROUP_0,
     R1_LOAD_AND_LATCH       = R1_LOAD | R1_AND_LATCH,
 };
 
@@ -106,6 +113,9 @@ enum {
 enum {
     NOP                     = 0x00,
     MOV_R1_IMMED            = 0x01,
+    CLC                     = 0x02,
+    STC                     = 0x03,
+    MOV_R1_PC               = 0x04,
 
     JMP_IMMED               = 0xff,
 };
@@ -145,6 +155,15 @@ uint64_t GenerateControlSignals(int loc)
 
     case JMP_IMMED:
         return FETCH_ASSERT_MAIN | PC_LOAD | PC_AND_LATCH | INSTRUCTION_SUPPRESS | ADDR_BUS_1_ASSERT_PC;      
+
+    case CLC:
+        return out | PGM_CLC;
+
+    case STC:
+        return out | PGM_STC;
+
+    case MOV_R1_PC:
+        return out | PC_ASSERT_MAIN | R1_LOAD_AND_LATCH;
 
     default:
         return nop;
