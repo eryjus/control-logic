@@ -10,7 +10,13 @@
 //     Date      Tracker  Version  Pgmr  Description
 //  -----------  -------  -------  ----  ---------------------------------------------------------------------------
 //  2023-Feb-24  Initial  v0.0.1   ADCL  Initial version
-//  2023-Mar-11  Initial  v0.0.2   ADCL  Expand the Control Logic to 24 control signals & add R1 controls
+//  2023-Mar-02  Initial  v0.0.2   ADCL  Add a NOP instruction
+//  2023-Mar-11  Initial  v0.0.3   ADCL  Expand the Control Logic to 24 control signals & add R1 controls
+//  2023-Mar-19  Initial  v0.0.4   ADCL  Add support for the `MOV R1,<imm16>` instruction
+//  2023-Mar-21  Initial  v0.0.5   ADCL  Bug fixes
+//  2023-Mar-29  Initial  v0.0.6   ADCL  Add support for the `JMP <imm16>` instruction
+//  2023-May-13  Initial  v0.0.7   ADCL  Add support for the `CLC` and `STC` instructions
+//  2023-May-22  Initial  v0.0.8   ADCL  Expand the instr to 12 bits; eliminate the direct-wired main bus assert
 //
 //===================================================================================================================
 
@@ -34,21 +40,50 @@ enum {
     ADDR_BUS_1_ASSERT_INTPC = (0b10     << 6) << 0,
     ADDR_BUS_1_ASSERT_INTRA = (0b11     << 6) << 0,
 
-    // bit 5 -- group assert to Main Bus
-    MAIN_BUS_GROUP_0        = (0b0      << 5) << 0,
-    MAIN_BUS_GROUP_1        = (0b1      << 5) << 0,
+    // bit 5:0 -- assert to Main Bus
+    MAIN_BUS_ASSERT_NONE    = (0b000000 << 0) << 0,
+    MAIN_BUS_ASSERT_R1      = (0b000001 << 0) << 0,
+    MAIN_BUS_ASSERT_R2      = (0b000010 << 0) << 0,
+    MAIN_BUS_ASSERT_R3      = (0b000011 << 0) << 0,
+    MAIN_BUS_ASSERT_R4      = (0b000100 << 0) << 0,
+    MAIN_BUS_ASSERT_R5      = (0b000101 << 0) << 0,
+    MAIN_BUS_ASSERT_R6      = (0b000110 << 0) << 0,
+    MAIN_BUS_ASSERT_R7      = (0b000111 << 0) << 0,
+    MAIN_BUS_ASSERT_R8      = (0b001000 << 0) << 0,
+    MAIN_BUS_ASSERT_R9      = (0b001001 << 0) << 0,
+    MAIN_BUS_ASSERT_R10     = (0b001010 << 0) << 0,
+    MAIN_BUS_ASSERT_R11     = (0b001011 << 0) << 0,
+    MAIN_BUS_ASSERT_R12     = (0b001100 << 0) << 0,
+    MAIN_BUS_ASSERT_SP      = (0b001101 << 0) << 0,
+    MAIN_BUS_ASSERT_RA      = (0b001110 << 0) << 0,
+    MAIN_BUS_ASSERT_PC      = (0b001111 << 0) << 0,
+    MAIN_BUS_ASSERT_ISP     = (0b010000 << 0) << 0,
+    MAIN_BUS_ASSERT_IRA     = (0b010001 << 0) << 0,
+    MAIN_BUS_ASSERT_IPC     = (0b010010 << 0) << 0,
+    MAIN_BUS_ASSERT_FETCH   = (0b010011 << 0) << 0,
+    MAIN_BUS_ASSERT_DEV1    = (0b010100 << 0) << 0,
+    MAIN_BUS_ASSERT_DEV2    = (0b010101 << 0) << 0,
+    MAIN_BUS_ASSERT_DEV3    = (0b010110 << 0) << 0,
+    MAIN_BUS_ASSERT_DEV4    = (0b010111 << 0) << 0,
+    MAIN_BUS_ASSERT_DEV5    = (0b011000 << 0) << 0,
+    MAIN_BUS_ASSERT_DEV6    = (0b011001 << 0) << 0,
+    MAIN_BUS_ASSERT_DEV7    = (0b011010 << 0) << 0,
+    MAIN_BUS_ASSERT_DEV8    = (0b011011 << 0) << 0,
+    MAIN_BUS_ASSERT_DEV9    = (0b011100 << 0) << 0,
+    MAIN_BUS_ASSERT_DEV10   = (0b011101 << 0) << 0,
+    MAIN_BUS_ASSERT_ALU     = (0b011110 << 0) << 0,
+    MAIN_BUS_ASSERT_MEMORY  = (0b011111 << 0) << 0,
 
-    // bit 4 -- Fetch Assert to Instruction
-    INSTRUCTION_ASSERT      = (0b0      << 4) << 0,
-    INSTRUCTION_SUPPRESS    = (0b1      << 4) << 0,
-
-    // bit 3 -- Clear the Program Carry
-    PGM_CLC                 = (0b1      << 3) << 0,
-
-    // bit 2 -- Set the Program Carry
-    PGM_STC                 = (0b1      << 2) << 0,
-
-    // bits 1:0 -- unused so far
+    MAIN_BUS_ASSERT_CTL1    = (0b100100 << 0) << 0,
+    MAIN_BUS_ASSERT_CTL2    = (0b100101 << 0) << 0,
+    MAIN_BUS_ASSERT_CTL3    = (0b100110 << 0) << 0,
+    MAIN_BUS_ASSERT_CTL4    = (0b100111 << 0) << 0,
+    MAIN_BUS_ASSERT_CTL5    = (0b101000 << 0) << 0,
+    MAIN_BUS_ASSERT_CTL6    = (0b101001 << 0) << 0,
+    MAIN_BUS_ASSERT_CTL7    = (0b101010 << 0) << 0,
+    MAIN_BUS_ASSERT_CTL8    = (0b101011 << 0) << 0,
+    MAIN_BUS_ASSERT_CTL9    = (0b101100 << 0) << 0,
+    MAIN_BUS_ASSERT_CTL10   = (0b101101 << 0) << 0,
 
 
     //---------------------------------------------------
@@ -69,7 +104,17 @@ enum {
     PC_INC                  = (0b10     << 4) << 8,
     PC_DEC                  = (0b11     << 4) << 8,
 
-    // bits 3:0 -- unused so far
+    // bit 3 -- Fetch Assert to Instruction
+    INSTRUCTION_ASSERT      = (0b0      << 3) << 8,
+    INSTRUCTION_SUPPRESS    = (0b1      << 3) << 8,
+
+    // bit 2 -- Clear the Program Carry
+    PGM_CLC                 = (0b1      << 2) << 8,
+
+    // bit 1 -- Set the Program Carry
+    PGM_STC                 = (0b1      << 1) << 8,
+
+    // bit 0 -- unused so far
 
 
     //---------------------------------------------------
@@ -92,8 +137,8 @@ enum {
     //
     // == Improve code readability
     //    ========================
-    FETCH_ASSERT_MAIN       = MAIN_BUS_GROUP_1 | INSTRUCTION_SUPPRESS,
-    PC_ASSERT_MAIN          = MAIN_BUS_GROUP_0,
+    FETCH_ASSERT_MAIN       = MAIN_BUS_ASSERT_FETCH | INSTRUCTION_SUPPRESS,
+    PC_ASSERT_MAIN          = MAIN_BUS_ASSERT_PC,
     R1_LOAD_AND_LATCH       = R1_LOAD | R1_AND_LATCH,
 };
 
@@ -103,21 +148,20 @@ enum {
 //
 //    Recall that the instruction word has the following format:
 // 
-//              CCCC IIII IIII MMMM
+//              CCCC IIII IIII IIII
 //
 //    Where:
 //    - CCCC are control flags, used to condition the instruction
-//    - IIII IIII is the instruction, encoded in the enum below
-//    - MMMM is the main bus assert, hard-wired into the control module
-//    -----------------------------------------------------------------
+//    - IIII IIII IIII is the instruction, encoded in the enum below
+//    --------------------------------------------------------------
 enum {
-    NOP                     = 0x00,
-    MOV_R1_IMMED            = 0x01,
-    CLC                     = 0x02,
-    STC                     = 0x03,
-    MOV_R1_PC               = 0x04,
+    NOP                     = 0x000,
+    MOV_R1_IMMED            = 0x013,
+    CLC                     = 0x020,
+    STC                     = 0x030,
+    MOV_R1_PC               = 0x04f,
 
-    JMP_IMMED               = 0xff,
+    JMP_IMMED               = 0xff3,
 };
 
 
@@ -139,9 +183,8 @@ uint64_t promBuffer [PROM_SIZE];
 //    ------------------------------------------------------------------
 uint64_t GenerateControlSignals(int loc)
 {
-    int flags = (loc >> 16) & 0x7f;         // top 7 bits of the memory address; flags for augmenting the control signals
-    int instr = (loc >> 0) & 0xff;          // bottom 8 bits for the memory address
-    // -- bottom 4 bits are inconsequential here
+    int flags = (loc >> 12) & 0x7;           // top 3 bits of the memory address; flags for augmenting the control signals
+    int instr = (loc >> 0) & 0xfff;          // bottom 12 bits for the memory address of the instruction
 
     const uint64_t nop = ADDR_BUS_1_ASSERT_PC | PC_AND_LATCH | PC_INC | INSTRUCTION_ASSERT;
     uint64_t out = ADDR_BUS_1_ASSERT_PC | PC_AND_LATCH | PC_INC;
