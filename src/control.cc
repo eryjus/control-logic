@@ -138,8 +138,10 @@ enum {
     // == Improve code readability
     //    ========================
     FETCH_ASSERT_MAIN       = MAIN_BUS_ASSERT_FETCH | INSTRUCTION_SUPPRESS,
-    PC_ASSERT_MAIN          = MAIN_BUS_ASSERT_PC,
+    R1_ASSERT_MAIN          = MAIN_BUS_ASSERT_R1,
     R1_LOAD_AND_LATCH       = R1_LOAD | R1_AND_LATCH,
+    R1_DEC_AND_LATCH        = R1_DEC | R1_AND_LATCH,
+    R1_INC_AND_LATCH        = R1_INC | R1_AND_LATCH,
 };
 
 
@@ -159,7 +161,9 @@ enum {
     MOV_R1_IMMED            = 0x013,
     CLC                     = 0x020,
     STC                     = 0x030,
-    MOV_R1_PC               = 0x04f,
+    DECR_R1                 = 0x040,
+    INCR_R1                 = 0x050,
+    JMP_R1                  = 0x060,
 
     JMP_IMMED               = 0xff3,
 };
@@ -184,7 +188,7 @@ uint64_t promBuffer [PROM_SIZE];
 uint64_t GenerateControlSignals(int loc)
 {
     int flags = (loc >> 12) & 0x7;           // top 3 bits of the memory address; flags for augmenting the control signals
-    int instr = (loc >> 0) & 0xfff;          // bottom 12 bits for the memory address of the instruction
+    int instr = (loc >>  0) & 0xfff;         // bottom 12 bits for the memory address of the instruction
 
     const uint64_t nop = ADDR_BUS_1_ASSERT_PC | PC_AND_LATCH | PC_INC | INSTRUCTION_ASSERT;
     uint64_t out = ADDR_BUS_1_ASSERT_PC | PC_AND_LATCH | PC_INC;
@@ -205,8 +209,14 @@ uint64_t GenerateControlSignals(int loc)
     case STC:
         return out | PGM_STC;
 
-    case MOV_R1_PC:
-        return out | PC_ASSERT_MAIN | R1_LOAD_AND_LATCH;
+    case DECR_R1:
+        return out | R1_DEC_AND_LATCH;
+
+    case INCR_R1:
+        return out | R1_INC_AND_LATCH;
+
+    case JMP_R1:
+        return R1_ASSERT_MAIN | PC_LOAD | PC_AND_LATCH | INSTRUCTION_SUPPRESS | ADDR_BUS_1_ASSERT_PC;
 
     default:
         return nop;
