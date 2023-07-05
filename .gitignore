@@ -2,3 +2,4 @@
 .vscode
 eeprom
 ctrl*.bin
+src/opcodes.h

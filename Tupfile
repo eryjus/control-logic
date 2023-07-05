@@ -17,5 +17,5 @@
 
 
 
-: src/*.cc |> clang -o %o %f |> eeprom
+: src/*.cc | src/opcodes.h |> clang -o %o %f |> eeprom
 : eeprom |> ./eeprom |> ctrl1.bin ctrl2.bin ctrl3.bin

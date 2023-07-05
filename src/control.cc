@@ -126,10 +126,19 @@ enum {
     // bit 7 -- R1 & Latch signal
     R1_AND_LATCH            = (0b1      << 7) << 16,
 
-    // bit 6 -- PC & Latch signal
-    PC_AND_LATCH            = (0b1      << 6) << 16,
+    // bit 6 -- R2 & Latch signal
+    R2_AND_LATCH            = (0b1      << 6) << 16,
 
-    // bits 5:0 -- unused so far
+    // bit 5 -- PC & Latch signal
+    PC_AND_LATCH            = (0b1      << 5) << 16,
+
+    // bits 4:3 -- R2 Load/Inc/Dec
+    R2_DO_NOTHING           = (0b00     << 3) << 16,
+    R2_LOAD                 = (0b01     << 3) << 16,
+    R2_INC                  = (0b10     << 3) << 16,
+    R2_DEC                  = (0b11     << 3) << 16,
+
+    // bits 2:0 -- unused so far
 
 
     //---------------------------------------------------
@@ -139,7 +148,9 @@ enum {
     //    ========================
     FETCH_ASSERT_MAIN       = MAIN_BUS_ASSERT_FETCH | INSTRUCTION_SUPPRESS,
     R1_ASSERT_MAIN          = MAIN_BUS_ASSERT_R1,
+    R2_ASSERT_MAIN          = MAIN_BUS_ASSERT_R2,
     R1_LOAD_AND_LATCH       = R1_LOAD | R1_AND_LATCH,
+    R2_LOAD_AND_LATCH       = R2_LOAD | R2_AND_LATCH,
     R1_DEC_AND_LATCH        = R1_DEC | R1_AND_LATCH,
     R1_INC_AND_LATCH        = R1_INC | R1_AND_LATCH,
 };
@@ -149,24 +160,14 @@ enum {
 // -- These are the instructions which will be encoded
 //
 //    Recall that the instruction word has the following format:
-// 
+//
 //              CCCC IIII IIII IIII
 //
 //    Where:
 //    - CCCC are control flags, used to condition the instruction
 //    - IIII IIII IIII is the instruction, encoded in the enum below
 //    --------------------------------------------------------------
-enum {
-    NOP                     = 0x000,
-    MOV_R1_IMMED            = 0x013,
-    CLC                     = 0x020,
-    STC                     = 0x030,
-    DECR_R1                 = 0x040,
-    INCR_R1                 = 0x050,
-    JMP_R1                  = 0x060,
-
-    JMP_IMMED               = 0xff3,
-};
+#include "opcodes.h"
 
 
 //
@@ -194,32 +195,42 @@ uint64_t GenerateControlSignals(int loc)
     uint64_t out = ADDR_BUS_1_ASSERT_PC | PC_AND_LATCH | PC_INC;
 
     switch (instr) {
-    case NOP:
+    default:
+    case OPCODE_NOP:
         return nop;
 
-    case MOV_R1_IMMED:
+    case OPCODE_MOV_R1___16_:
         return out | FETCH_ASSERT_MAIN | R1_LOAD_AND_LATCH;
 
-    case JMP_IMMED:
-        return FETCH_ASSERT_MAIN | PC_LOAD | PC_AND_LATCH | INSTRUCTION_SUPPRESS | ADDR_BUS_1_ASSERT_PC;      
+    case OPCODE_MOV_R2___16_:
+        return out | FETCH_ASSERT_MAIN | R2_LOAD_AND_LATCH;
 
-    case CLC:
-        return out | PGM_CLC;
+    case OPCODE_MOV_R2_R1:
+        return out | R1_ASSERT_MAIN | R2_LOAD_AND_LATCH;
 
-    case STC:
-        return out | PGM_STC;
+    case OPCODE_MOV_R1_R2:
+        return out | R2_ASSERT_MAIN | R1_LOAD_AND_LATCH;
 
-    case DECR_R1:
-        return out | R1_DEC_AND_LATCH;
+    case OPCODE_JMP___16_:
+        return FETCH_ASSERT_MAIN | PC_LOAD | PC_AND_LATCH | INSTRUCTION_SUPPRESS | ADDR_BUS_1_ASSERT_PC;
 
-    case INCR_R1:
-        return out | R1_INC_AND_LATCH;
-
-    case JMP_R1:
+    case OPCODE_JMP_R1:
         return R1_ASSERT_MAIN | PC_LOAD | PC_AND_LATCH | INSTRUCTION_SUPPRESS | ADDR_BUS_1_ASSERT_PC;
 
-    default:
-        return nop;
+    case OPCODE_JMP_R2:
+        return R2_ASSERT_MAIN | PC_LOAD | PC_AND_LATCH | INSTRUCTION_SUPPRESS | ADDR_BUS_1_ASSERT_PC;
+
+    case OPCODE_DECR_R1:
+        return out | R1_DEC_AND_LATCH;
+
+    case OPCODE_INCR_R1:
+        return out | R1_INC_AND_LATCH;
+
+    case OPCODE_CLC:
+        return out | PGM_CLC;
+
+    case OPCODE_STC:
+        return out | PGM_STC;
     }
 }
 
