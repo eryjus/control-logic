@@ -191,7 +191,7 @@ uint64_t GenerateControlSignals(int loc)
     int flags = (loc >> 12) & 0x7;           // top 3 bits of the memory address; flags for augmenting the control signals
     int instr = (loc >>  0) & 0xfff;         // bottom 12 bits for the memory address of the instruction
 
-    const uint64_t nop = ADDR_BUS_1_ASSERT_PC | PC_AND_LATCH | PC_INC | INSTRUCTION_ASSERT;
+    const uint64_t nop = ADDR_BUS_1_ASSERT_PC | PC_AND_LATCH | PC_INC | INSTRUCTION_ASSERT | R1_AND_LATCH | R2_AND_LATCH;
     uint64_t out = ADDR_BUS_1_ASSERT_PC | PC_AND_LATCH | PC_INC;
 
     switch (instr) {
