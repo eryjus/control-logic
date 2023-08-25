@@ -153,6 +153,8 @@ enum {
     R2_LOAD_AND_LATCH       = R2_LOAD | R2_AND_LATCH,
     R1_DEC_AND_LATCH        = R1_DEC | R1_AND_LATCH,
     R1_INC_AND_LATCH        = R1_INC | R1_AND_LATCH,
+    R2_DEC_AND_LATCH        = R2_DEC | R2_AND_LATCH,
+    R2_INC_AND_LATCH        = R2_INC | R2_AND_LATCH,
 };
 
 
@@ -225,6 +227,12 @@ uint64_t GenerateControlSignals(int loc)
 
     case OPCODE_INCR_R1:
         return out | R1_INC_AND_LATCH;
+
+    case OPCODE_DECR_R2:
+        return out | R2_DEC_AND_LATCH;
+
+    case OPCODE_INCR_R2:
+        return out | R2_INC_AND_LATCH;
 
     case OPCODE_CLC:
         return out | PGM_CLC;
