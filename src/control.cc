@@ -92,29 +92,29 @@ enum {
     // == CTRL2
     //    =====
 
-    // bits 7:6 -- R1 Load/Inc/Dec
-    R1_DO_NOTHING           = (0b00     << 6) << 8,
-    R1_LOAD                 = (0b01     << 6) << 8,
-    R1_INC                  = (0b10     << 6) << 8,
-    R1_DEC                  = (0b11     << 6) << 8,
+    // bits 7:6 -- PC Load/Inc/Dec
+    PC_DO_NOTHING           = (0b00     << 6) << 8,
+    PC_LOAD                 = (0b01     << 6) << 8,
+    PC_INC                  = (0b10     << 6) << 8,
+    PC_DEC                  = (0b11     << 6) << 8,
 
-    // bits 5:4 -- PC Load/Inc/Dec
-    PC_DO_NOTHING           = (0b00     << 4) << 8,
-    PC_LOAD                 = (0b01     << 4) << 8,
-    PC_INC                  = (0b10     << 4) << 8,
-    PC_DEC                  = (0b11     << 4) << 8,
+    // bits 5:4 -- RA Load/Inc/Dec
+    RA_DO_NOTHING           = (0b00     << 4) << 8,
+    RA_LOAD                 = (0b01     << 4) << 8,
+    RA_INC                  = (0b10     << 4) << 8,
+    RA_DEC                  = (0b11     << 4) << 8,
 
-    // bit 3 -- Fetch Assert to Instruction
-    INSTRUCTION_ASSERT      = (0b0      << 3) << 8,
-    INSTRUCTION_SUPPRESS    = (0b1      << 3) << 8,
+    // bits 3:2 -- SP Load/Inc/Dec
+    SP_DO_NOTHING           = (0b00     << 2) << 8,
+    SP_LOAD                 = (0b01     << 2) << 8,
+    SP_INC                  = (0b10     << 2) << 8,
+    SP_DEC                  = (0b11     << 2) << 8,
 
-    // bit 2 -- Clear the Program Carry
-    PGM_CLC                 = (0b1      << 2) << 8,
-
-    // bit 1 -- Set the Program Carry
-    PGM_STC                 = (0b1      << 1) << 8,
-
-    // bit 0 -- unused so far
+    // bits 1:0 -- INT-PC Load/Inc/Dec
+    INT_PC_DO_NOTHING       = (0b00     << 0) << 8,
+    INT_PC_LOAD             = (0b01     << 0) << 8,
+    INT_PC_INC              = (0b10     << 0) << 8,
+    INT_PC_DEC              = (0b11     << 0) << 8,
 
 
     //---------------------------------------------------
@@ -123,22 +123,33 @@ enum {
     // == CTRL3
     //    =====
 
-    // bit 7 -- R1 & Latch signal
-    R1_AND_LATCH            = (0b1      << 7) << 16,
+    // bits 7:6 -- INT-RA Load/Inc/Dec
+    INT_RA_DO_NOTHING       = (0b00     << 6) << 16,
+    INT_RA_LOAD             = (0b01     << 6) << 16,
+    INT_RA_INC              = (0b10     << 6) << 16,
+    INT_RA_DEC              = (0b11     << 6) << 16,
 
-    // bit 6 -- R2 & Latch signal
-    R2_AND_LATCH            = (0b1      << 6) << 16,
+    // bits 5:4 -- INT-SP Load/Inc/Dec
+    INT_SP_DO_NOTHING       = (0b00     << 4) << 16,
+    INT_SP_LOAD             = (0b01     << 4) << 16,
+    INT_SP_INC              = (0b10     << 4) << 16,
+    INT_SP_DEC              = (0b11     << 4) << 16,
 
-    // bit 5 -- PC & Latch signal
-    PC_AND_LATCH            = (0b1      << 5) << 16,
+    // bit 3 -- Memory Write
+    MEMORY_NOTHING          = (0b0      << 3) << 16,
+    MEMORY_WRITE            = (0b1      << 3) << 16,
 
-    // bits 4:3 -- R2 Load/Inc/Dec
-    R2_DO_NOTHING           = (0b00     << 3) << 16,
-    R2_LOAD                 = (0b01     << 3) << 16,
-    R2_INC                  = (0b10     << 3) << 16,
-    R2_DEC                  = (0b11     << 3) << 16,
+    // bit 2 -- Fetch Assert to Instruction
+    INSTRUCTION_ASSERT      = (0b0      << 2) << 16,
+    INSTRUCTION_SUPPRESS    = (0b1      << 2) << 16,
 
-    // bits 2:0 -- unused so far
+    // bit 1 -- R1 Load
+    R1_DO_NOTHING           = (0b0      << 1) << 16,
+    R1_LOAD                 = (0b1      << 1) << 16,
+
+    // bit 0 -- R2 Load
+    R2_DO_NOTHING           = (0b0      << 0) << 16,
+    R2_LOAD                 = (0b1      << 0) << 16,
 
 
     //---------------------------------------------------
@@ -149,12 +160,6 @@ enum {
     FETCH_ASSERT_MAIN       = MAIN_BUS_ASSERT_FETCH | INSTRUCTION_SUPPRESS,
     R1_ASSERT_MAIN          = MAIN_BUS_ASSERT_R1,
     R2_ASSERT_MAIN          = MAIN_BUS_ASSERT_R2,
-    R1_LOAD_AND_LATCH       = R1_LOAD | R1_AND_LATCH,
-    R2_LOAD_AND_LATCH       = R2_LOAD | R2_AND_LATCH,
-    R1_DEC_AND_LATCH        = R1_DEC | R1_AND_LATCH,
-    R1_INC_AND_LATCH        = R1_INC | R1_AND_LATCH,
-    R2_DEC_AND_LATCH        = R2_DEC | R2_AND_LATCH,
-    R2_INC_AND_LATCH        = R2_INC | R2_AND_LATCH,
 };
 
 
@@ -193,8 +198,8 @@ uint64_t GenerateControlSignals(int loc)
     int flags = (loc >> 12) & 0x7;           // top 3 bits of the memory address; flags for augmenting the control signals
     int instr = (loc >>  0) & 0xfff;         // bottom 12 bits for the memory address of the instruction
 
-    const uint64_t nop = ADDR_BUS_1_ASSERT_PC | PC_AND_LATCH | PC_INC | INSTRUCTION_ASSERT | R1_AND_LATCH | R2_AND_LATCH;
-    uint64_t out = ADDR_BUS_1_ASSERT_PC | PC_AND_LATCH | PC_INC;
+    const uint64_t nop = ADDR_BUS_1_ASSERT_PC |  PC_INC | INSTRUCTION_ASSERT;
+    uint64_t out = ADDR_BUS_1_ASSERT_PC | PC_INC;
 
     switch (instr) {
     default:
@@ -202,43 +207,31 @@ uint64_t GenerateControlSignals(int loc)
         return nop;
 
     case OPCODE_MOV_R1___16_:
-        return out | FETCH_ASSERT_MAIN | R1_LOAD_AND_LATCH;
+        return out | FETCH_ASSERT_MAIN | R1_LOAD;
 
     case OPCODE_MOV_R2___16_:
-        return out | FETCH_ASSERT_MAIN | R2_LOAD_AND_LATCH;
+        return out | FETCH_ASSERT_MAIN | R2_LOAD;
 
     case OPCODE_MOV_R2_R1:
-        return out | R1_ASSERT_MAIN | R2_LOAD_AND_LATCH;
+        return out | R1_ASSERT_MAIN | R2_LOAD;
 
     case OPCODE_MOV_R1_R2:
-        return out | R2_ASSERT_MAIN | R1_LOAD_AND_LATCH;
+        return out | R2_ASSERT_MAIN | R1_LOAD;
 
     case OPCODE_JMP___16_:
-        return FETCH_ASSERT_MAIN | PC_LOAD | PC_AND_LATCH | INSTRUCTION_SUPPRESS | ADDR_BUS_1_ASSERT_PC;
+        return FETCH_ASSERT_MAIN | PC_LOAD | INSTRUCTION_SUPPRESS | ADDR_BUS_1_ASSERT_PC;
 
     case OPCODE_JMP_R1:
-        return R1_ASSERT_MAIN | PC_LOAD | PC_AND_LATCH | INSTRUCTION_SUPPRESS | ADDR_BUS_1_ASSERT_PC;
+        return R1_ASSERT_MAIN | PC_LOAD | INSTRUCTION_SUPPRESS | ADDR_BUS_1_ASSERT_PC;
 
     case OPCODE_JMP_R2:
-        return R2_ASSERT_MAIN | PC_LOAD | PC_AND_LATCH | INSTRUCTION_SUPPRESS | ADDR_BUS_1_ASSERT_PC;
-
-    case OPCODE_DECR_R1:
-        return out | R1_DEC_AND_LATCH;
-
-    case OPCODE_INCR_R1:
-        return out | R1_INC_AND_LATCH;
-
-    case OPCODE_DECR_R2:
-        return out | R2_DEC_AND_LATCH;
-
-    case OPCODE_INCR_R2:
-        return out | R2_INC_AND_LATCH;
+        return R2_ASSERT_MAIN | PC_LOAD | INSTRUCTION_SUPPRESS | ADDR_BUS_1_ASSERT_PC;
 
     case OPCODE_CLC:
-        return out | PGM_CLC;
+        return out;
 
     case OPCODE_STC:
-        return out | PGM_STC;
+        return out;
     }
 }
 
