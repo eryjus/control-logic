@@ -20,7 +20,7 @@
 
 
 .phony: all
-all: build
+all: build ./eeprom
 	./eeprom
 
 .phony: build
